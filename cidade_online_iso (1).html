@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CIDADE ONLINE — Isométrico</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- ════════════════════════════════════════════════════════════
+     PARTE 1 — ESTILOS
+     ════════════════════════════════════════════════════════════ -->
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F5F0E8;--cream:#FAF6EE;--line:#2A2420;--line2:#4A3F38;
+  --paper:#FFFDF8;--grid:#E8E0D0;
+  --c-marco:#3B82F6;--c-rodrigo:#10B981;--c-amara:#F59E0B;--c-edu:#8B5CF6;--c-player:#EF4444;
+  --t-empatico:#10B981;--t-cetico:#3B82F6;--t-provocador:#EF4444;--t-observador:#F59E0B;
+  --mono:'Space Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:var(--sans);touch-action:none;color:var(--line)}
+
+#splash{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:1.4rem;text-align:center;padding:2rem}
+.splash-title{font-family:var(--mono);font-size:clamp(2.5rem,8vw,4.5rem);font-weight:700;line-height:1;color:var(--line)}
+.splash-title span{color:var(--c-marco)}
+.splash-sub{font-size:13px;color:var(--line2);line-height:1.7;max-width:430px}
+.btn-start{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;padding:11px 30px;background:var(--line);color:var(--cream);border:none;cursor:pointer}
+.btn-start:hover{opacity:.85}
+.splash-hint{font-family:var(--mono);font-size:9px;color:var(--line2);opacity:.55;letter-spacing:.1em;text-transform:uppercase}
+
+#hud{position:fixed;top:0;left:0;right:0;height:42px;background:var(--cream);border-bottom:1px solid rgba(42,36,32,.15);display:flex;align-items:center;justify-content:space-between;padding:0 12px;z-index:100;gap:10px}
+.hud-title{font-family:var(--mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;flex-shrink:0}
+.hud-stats{display:flex;gap:9px;align-items:center;flex-shrink:0}
+.stat-pill{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9px}
+.stat-pill span{color:var(--line2);opacity:.65;text-transform:uppercase}
+.stat-bar{width:34px;height:3px;background:rgba(42,36,32,.12);border-radius:2px;overflow:hidden}
+.stat-fill{height:100%;border-radius:2px;transition:width .45s ease}
+
+#game-canvas{position:fixed;top:42px;left:0;right:0;bottom:0;overflow:hidden}
+canvas#iso{width:100%;height:100%;display:block}
+
+#joystick-zone{position:fixed;bottom:26px;left:22px;width:108px;height:108px;z-index:200;display:none;touch-action:none}
+#joystick-base{width:88px;height:88px;border-radius:50%;background:rgba(42,36,32,.10);border:1.5px solid rgba(42,36,32,.22);position:absolute;top:10px;left:10px}
+#joystick-thumb{width:38px;height:38px;border-radius:50%;background:rgba(42,36,32,.38);position:absolute;top:25px;left:25px}
+#interact-btn{position:fixed;bottom:42px;right:24px;width:66px;height:66px;border-radius:50%;background:var(--line);color:var(--cream);font-family:var(--mono);font-size:9px;border:none;cursor:pointer;z-index:200;display:none;text-transform:uppercase;letter-spacing:.05em;line-height:1.3}
+
+#interact-prompt{position:fixed;bottom:120px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;background:var(--line);color:var(--cream);padding:5px 13px;border-radius:2px;display:none;pointer-events:none;z-index:150;max-width:90vw;text-align:center;line-height:1.5;text-transform:none}
+
+#profile-panel{position:fixed;top:50px;right:10px;width:182px;background:var(--cream);border:1px solid rgba(42,36,32,.14);padding:8px 10px;font-family:var(--mono);font-size:8.5px;display:none;z-index:90;box-shadow:3px 3px 0 rgba(42,36,32,.06)}
+.pp-head{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.pp-dot{width:8px;height:8px;border-radius:50%}
+.pp-trait{font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.pp-bars{display:flex;flex-direction:column;gap:3px}
+.pp-bar-row{display:flex;align-items:center;gap:5px}
+.pp-bar-lab{width:58px;opacity:.7;text-transform:uppercase}
+.pp-bar-track{flex:1;height:3px;background:rgba(42,36,32,.12);border-radius:2px;overflow:hidden}
+.pp-bar-fill{height:100%}
+
+#dialogue-overlay{position:fixed;inset:0;z-index:300;pointer-events:none}
+#dialogue-overlay.active{pointer-events:auto;background:rgba(42,36,32,.05)}
+#dialogue-box{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);width:min(550px,calc(100vw - 28px));background:var(--paper);border:1.5px solid var(--line);display:none;flex-direction:column;box-shadow:5px 5px 0 rgba(42,36,32,.10)}
+#dialogue-box.open{display:flex}
+#dlg-header{padding:8px 12px;border-bottom:1px solid rgba(42,36,32,.1);display:flex;align-items:center;gap:9px;background:var(--cream)}
+.dlg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+#dlg-name{font-family:var(--mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+#dlg-role{font-family:var(--mono);font-size:8.5px;color:var(--line2);opacity:.7}
+#dlg-messages{max-height:190px;overflow-y:auto;padding:11px 12px;display:flex;flex-direction:column;gap:7px}
+.msg{display:flex;gap:8px;max-width:92%;animation:msg-in .16s ease}
+@keyframes msg-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.msg.npc{align-self:flex-start}
+.msg.player{align-self:flex-end;flex-direction:row-reverse}
+.msg-bubble{padding:7px 11px;font-size:11.5px;line-height:1.6;border-radius:3px}
+.msg.npc .msg-bubble{background:var(--cream);color:var(--line);border:1px solid rgba(42,36,32,.12)}
+.msg.player .msg-bubble{background:var(--line);color:var(--cream)}
+.msg-intent{font-family:var(--mono);font-size:7.5px;color:var(--line2);opacity:.6;align-self:flex-end;margin-top:2px}
+#dlg-choices{display:flex;flex-direction:column;border-top:1px solid rgba(42,36,32,.12)}
+.dlg-choice{padding:9px 12px;font-size:11.5px;cursor:pointer;border-bottom:1px solid rgba(42,36,32,.06);display:flex;gap:9px;align-items:flex-start;color:var(--line);background:var(--paper);line-height:1.55}
+.dlg-choice:hover{background:var(--cream)}
+.dlg-choice:last-child{border-bottom:none}
+.dlg-choice-letter{font-family:var(--mono);font-size:12px;font-weight:700;flex-shrink:0;line-height:1.3}
+#dlg-close-row{padding:6px 12px;border-top:1px solid rgba(42,36,32,.08);background:var(--cream);display:flex;justify-content:flex-end}
+#dlg-close{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.08em;background:none;border:none;cursor:pointer;color:var(--line2);opacity:.65}
+#dlg-close:hover{opacity:1}
+
+#intent-flash{position:fixed;bottom:120px;right:14px;font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.08em;padding:5px 11px;border-radius:2px;background:var(--line);color:var(--cream);display:none;pointer-events:none;z-index:400}
+#intent-flash.show{display:block;animation:tag-pop 2.2s ease forwards}
+@keyframes tag-pop{0%{opacity:0;transform:translateY(6px)}15%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
+
+#final-report{position:fixed;inset:0;z-index:500;background:var(--bg);overflow-y:auto;display:none;padding:2.5rem 1.2rem}
+#final-report.open{display:block}
+.report-wrap{max-width:560px;margin:0 auto}
+.report-kicker{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.18em;color:var(--line2);opacity:.6;margin-bottom:1rem}
+.report-arch{font-family:var(--mono);font-size:clamp(1.6rem,6vw,2.4rem);font-weight:700;line-height:1.05;margin-bottom:.6rem}
+.report-desc{font-size:13px;line-height:1.7;color:var(--line2);margin-bottom:1.6rem}
+.report-section{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--line2);opacity:.6;margin:1.4rem 0 .6rem}
+.report-bars{display:flex;flex-direction:column;gap:7px}
+.rb-row{display:flex;align-items:center;gap:9px}
+.rb-lab{width:96px;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--line2)}
+.rb-track{flex:1;height:5px;background:rgba(42,36,32,.12);border-radius:2px;overflow:hidden}
+.rb-fill{height:100%}
+.rb-num{font-family:var(--mono);font-size:10px;font-weight:700;width:18px;text-align:right}
+.report-chars{display:flex;flex-wrap:wrap;gap:8px}
+.rc-card{flex:1;min-width:130px;border-top:3px solid;padding:7px 9px;background:var(--cream)}
+.rc-name{font-family:var(--mono);font-size:9px;font-weight:700;margin-bottom:3px}
+.rc-choice{font-size:10.5px;color:var(--line2);line-height:1.5}
+.report-flags{list-style:none;display:flex;flex-direction:column;gap:7px}
+.report-flags li{font-size:11px;color:var(--line2);border-left:2px solid rgba(42,36,32,.22);padding-left:11px;line-height:1.6}
+.report-portrait{background:var(--cream);border:1px solid rgba(42,36,32,.14);padding:11px 13px}
+.rp-trait{font-family:var(--mono);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.rp-line{font-size:12px;color:var(--line2);line-height:1.6;margin-top:5px}
+.rp-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.rp-tag{font-family:var(--mono);font-size:8px;padding:2px 7px;border-radius:2px;border:1px solid rgba(42,36,32,.2);color:var(--line2)}
+.report-epigraph{font-style:italic;font-size:12.5px;color:var(--line2);border-left:2px solid var(--line);padding-left:13px;margin:1.6rem 0;line-height:1.7}
+.report-src{font-family:var(--mono);font-size:8px;color:var(--line2);opacity:.5;margin-top:1.8rem;line-height:1.8}
+.btn-restart{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:11px 26px;background:var(--line);color:var(--cream);border:none;cursor:pointer;margin-top:1.6rem}
+.btn-restart:hover{opacity:.85}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════
+     PARTE 2 — ESQUELETO HTML
+     ════════════════════════════════════════════════════════════ -->
+<div id="splash">
+  <div class="splash-title">CIDADE<br><span>ONLINE</span></div>
+  <div class="splash-sub">Você é uma pesquisadora que chega a Salvador para entender como a cidade inteligente foi instalada. Ande pelos bairros, encontre quatro pessoas presas nessa engrenagem e converse. Você não decide por elas — o que você fala é que inclina o que cada uma vai fazer.</div>
+  <button class="btn-start" id="btn-start">▶ ENTRAR NA CIDADE</button>
+  <div class="splash-hint">WASD / setas · joystick no celular · E para conversar</div>
+</div>
+
+<div id="hud" class="hidden">
+  <div class="hud-title">CIDADE ONLINE</div>
+  <div class="hud-stats">
+    <div class="stat-pill"><span>CÂM</span><div class="stat-bar"><div class="stat-fill" id="sf-cam" style="background:var(--c-player)"></div></div></div>
+    <div class="stat-pill"><span>TRANSP</span><div class="stat-bar"><div class="stat-fill" id="sf-tr" style="background:var(--c-marco)"></div></div></div>
+    <div class="stat-pill"><span>EQUID</span><div class="stat-bar"><div class="stat-fill" id="sf-eq" style="background:var(--c-rodrigo)"></div></div></div>
+  </div>
+</div>
+
+<div id="game-canvas"><canvas id="iso"></canvas></div>
+
+<div id="joystick-zone"><div id="joystick-base"><div id="joystick-thumb"></div></div></div>
+<button id="interact-btn">FALAR<br>(E)</button>
+<div id="interact-prompt">[ E ] Conversar</div>
+
+<div id="profile-panel">
+  <div class="pp-head"><div class="pp-dot" id="pp-dot"></div><span class="pp-trait" id="pp-trait">—</span></div>
+  <div class="pp-bars" id="pp-bars"></div>
+</div>
+
+<div id="dialogue-overlay">
+  <div id="dialogue-box">
+    <div id="dlg-header">
+      <div class="dlg-dot" id="dlg-dot"></div>
+      <div><div id="dlg-name"></div><div id="dlg-role"></div></div>
+    </div>
+    <div id="dlg-messages"></div>
+    <div id="dlg-choices"></div>
+    <div id="dlg-close-row"><button id="dlg-close">✕ sair da conversa</button></div>
+  </div>
+</div>
+
+<div id="intent-flash"></div>
+<div id="final-report"><div class="report-wrap" id="report-content"></div></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   CIDADE ONLINE — Motor Isométrico 2.5D · 100% offline (roda no GitHub)
+   Diálogo em árvore ramificada: você escolhe SUAS falas; o NPC decide.
+   ════════════════════════════════════════════════════════════ */
+
+/* ════════════════════════════════════════════════════════════
+   PARTE 3 — CONSTANTES, PROJEÇÃO ISO E MAPA (validado por BFS)
+   ════════════════════════════════════════════════════════════ */
+const TILE_W=64, TILE_H=32, MAP_ROWS=20, MAP_COLS=20;
+function isoProject(col,row){ return { x:(col-row)*(TILE_W/2), y:(col+row)*(TILE_H/2) }; }
+const TILE_MAP=[
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,4,4,4,0,0,2,0,0,0,0,0,0,2,0,0,0,0,0,1],
+  [1,4,4,4,0,0,2,0,0,0,5,0,0,2,0,0,0,0,0,1],
+  [1,4,4,4,0,0,2,0,0,0,0,0,0,2,0,1,1,0,0,1],
+  [1,0,0,0,0,0,2,0,0,0,0,0,0,2,0,1,1,0,0,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,0,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,0,1],
+  [1,0,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,0,1],
+  [1,0,0,5,0,0,2,0,0,1,1,0,0,2,0,0,5,0,0,1],
+  [1,0,0,0,0,0,2,0,0,1,1,0,0,2,0,0,0,0,0,1],
+  [1,1,1,1,0,0,2,0,0,0,0,0,0,2,0,1,1,0,0,1],
+  [1,1,1,1,0,0,2,0,0,0,0,0,0,2,0,1,1,0,0,1],
+  [1,0,0,0,0,0,2,0,0,0,0,0,0,2,0,1,1,0,0,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,0,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,0,1],
+  [1,0,0,0,0,0,2,0,0,0,0,0,0,2,0,3,3,3,3,1],
+  [1,0,0,0,0,0,2,0,5,0,1,1,1,2,0,3,3,3,3,1],
+  [1,0,0,0,0,0,2,0,0,0,1,1,1,2,0,3,3,3,3,1],
+  [1,0,0,0,0,0,2,0,0,0,0,0,0,2,0,3,3,3,3,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+const WALKABLE=new Set([0,2,4,5]);
+function canWalk(c,r){ if(c<0||r<0||c>=MAP_COLS||r>=MAP_ROWS) return false; return WALKABLE.has(TILE_MAP[r][c]); }
+const BAIRRO_LABELS=[
+  {col:2,row:2,text:'PARQUE'},{col:10,row:2,text:'CENTRO ADMIN.'},
+  {col:3,row:8,text:'UFBA / FEDERAÇÃO'},{col:16,row:8,text:'PITUBA'},
+  {col:8,row:16,text:'PELOURINHO'},{col:16,row:16,text:'BAÍA'},{col:2,row:18,text:'CAJAZEIRAS'}
+];
+
+/* ════════════════════════════════════════════════════════════
+   PARTE 4 — CONTEÚDO: PERSONAGENS + CONVERSAS RAMIFICADAS
+   --------------------------------------------------------------
+   Esta é a parte que você edita pra mudar falas/decisões.
+   Estrutura de cada conversa:
+     convo.start          → id do nó inicial
+     convo.nodes[id]      → { npc:"fala", options:[ ...falas suas... ] }
+     uma opção sua        → { text, trait, push:{outcome:peso}, next }
+        · trait: empatico|cetico|provocador|observador (alimenta seu retrato)
+        · push:  inclina a decisão DO personagem (não a sua)
+        · sem trait/push   = pergunta de contexto (onboarding)
+        · next='__decide__'= encerra: o personagem decide e age
+     convo.outcomes[k]    → { label, narrate:[...], effects:{...} }
+     convo.fallback       → decisão se você não inclinou nada
+   ════════════════════════════════════════════════════════════ */
+const NPCS = {
+
+  /* ── MARCO ── decisão DELE: enterrar / publicar / vazar o relatório ── */
+  marco:{
+    id:'marco', name:'Marco Santos', role:'Sec.-Adj. de Inovação · 2014–2026',
+    color:'#3B82F6', col:10, row:2, requires:[],
+    convo:{
+      start:'open', fallback:'bury',
+      outcomes:{
+        bury:{ label:'Enterrou o relatório.',
+          narrate:['Marco respira fundo. "Talvez não seja a hora." O relatório volta pra gaveta.','Você sai sabendo que ele não vai sair de lá tão cedo.'],
+          effects:{ reportStatus:'suppressed', cameras:1, transparency:-1, equity:-1 } },
+        publish:{ label:'Publicou, com o próprio nome.',
+          narrate:['Marco fica calado um tempo. Depois: "Tá. Eu assino."','No dia seguinte o relatório de falsos positivos sai público, com o nome dele embaixo.'],
+          effects:{ reportStatus:'public', cameras:-1, transparency:2, equity:2, marco_legacy:'positive' } },
+        leak:{ label:'Entregou o dado para a pesquisa.',
+          narrate:['"Você tem razão. Eu não preciso ser o rosto disso." Ele copia o arquivo num pen-drive.','Diz que vai procurar a Amara, na UFBA. O dado não morre na gaveta — mas também não tem o nome dele.'],
+          effects:{ reportStatus:'leaked_to_amara', amara_has_report:true, transparency:1, equity:1 } }
+      },
+      nodes:{
+        open:{ npc:'Você é a pesquisadora, né? Pode perguntar. A prefeitura não tem nada a esconder.', options:[
+          { text:'Pra ser sincera, cheguei agora. Me explica: o que é essa "cidade inteligente" de Salvador?', next:'context' },
+          { text:'Quase 1.900 câmeras. Quem garante que elas funcionam?', trait:'cetico', push:{publish:1}, next:'r1' },
+          { text:'Você sabe que tem gente sendo parada por erro dessas câmeras.', trait:'provocador', push:{publish:1}, next:'r1' }
+        ]},
+        context:{ npc:'Desde 2014 a cidade foi recebendo câmera, sensor, reconhecimento facial — num pacote vendido como modernização. Cada contrato pareceu técnico. Ninguém votou nisso. Hoje é uma malha que ninguém controla por inteiro. É isso que você veio entender.', options:[
+          { text:'E você assinou esses contratos?', trait:'cetico', push:{publish:1}, next:'r1' },
+          { text:'Quem decidiu em quais bairros as câmeras vão?', trait:'observador', push:{leak:1}, next:'r1' }
+        ]},
+        r1:{ npc:'Existe um relatório interno. A taxa de falso positivo do reconhecimento facial em pele escura é alta demais pra soltar sem custo político. Está na minha mesa agora.', options:[
+          { text:'Então publica. As pessoas têm direito de saber que estão sendo marcadas por engano.', trait:'provocador', push:{publish:2}, next:'r2' },
+          { text:'Esse dado precisa de validação independente antes de virar arma.', trait:'cetico', push:{leak:1,publish:1}, next:'r2' },
+          { text:'Não solta sozinho. Entrega pra quem tenha como sustentar isso — a UFBA.', trait:'observador', push:{leak:2}, next:'r2' },
+          { text:'Deve ser pesado carregar isso sozinho.', trait:'empatico', push:{publish:1}, next:'r2' }
+        ]},
+        r2:{ npc:'Se isso sair, eu posso perder o cargo. Doze anos de carreira. Mesmo assim você acha que eu devia soltar?', options:[
+          { text:'Cargo se recupera. Quem foi marcado por engano não recupera o que passou.', trait:'provocador', push:{publish:2}, next:'__decide__' },
+          { text:'Não é sobre você ser herói. É sobre o dado não morrer na sua gaveta.', trait:'empatico', push:{leak:1,publish:1}, next:'__decide__' },
+          { text:'Se você não consegue defender a metodologia, segurar pode ser o responsável.', trait:'cetico', push:{bury:2}, next:'__decide__' },
+          { text:'Você não precisa aparecer. Vaza pra pesquisa e deixa a UFBA assinar a briga.', trait:'observador', push:{leak:2}, next:'__decide__' }
+        ]}
+      }
+    }
+  },
+
+  /* ── RODRIGO ── decisão DELE: destruir / CPI / entregar à Amara / vazar anônimo ── */
+  rodrigo:{
+    id:'rodrigo', name:'Rodrigo Maia', role:'Engenheiro de PPP · São Paulo',
+    color:'#10B981', col:16, row:8, requires:[],
+    convo:{
+      start:'open', fallback:'destroy',
+      outcomes:{
+        destroy:{ label:'Apagou os documentos.',
+          narrate:['Rodrigo olha pro pen-drive por um tempo. "Eu tenho filhos."','Ele apaga os arquivos. "Não é a minha briga." Você não acredita totalmente nele — nem ele.'],
+          effects:{ equity:-1 } },
+        cpi:{ label:'Depôs na CPI com o material.',
+          narrate:['"Fui eu que projetei. Então sou eu que tenho como provar." Ele decide depor.','Na CPI, o engenheiro do sistema entrega tudo. Dois clientes rescindem. Ele sabia que seria assim.'],
+          effects:{ cpiDeponent:'full', rodrigoWhistle:true, transparency:2, equity:2, cameras:-1 } },
+        give_amara:{ label:'Entregou o material à pesquisa.',
+          narrate:['"Eu não preciso ser o rosto. Só preciso que chegue em quem sabe o que fazer."','Ele combina de entregar os documentos para a Amara, que tem proteção institucional.'],
+          effects:{ amara_has_report:true, transparency:1, equity:1 } },
+        anon:{ label:'Vazou anonimamente para a imprensa.',
+          narrate:['"Tem um jeito de isso sair sem o meu nome." Ele decide vazar por canal seguro.','A reportagem sai semanas depois citando "documentos anônimos". Ele assiste pela TV da sala.'],
+          effects:{ rodrigoWhistle:true, transparency:2, equity:1 } }
+      },
+      nodes:{
+        open:{ npc:'Você quer falar sobre o sistema? Eu projeto a arquitetura. O que fazem com ela depois não é comigo.', options:[
+          { text:'Espera — me explica primeiro. O que exatamente você projetou pra Salvador?', next:'context' },
+          { text:'Você sabia que esse template ia virar reconhecimento facial?', trait:'cetico', push:{cpi:1}, next:'r1' },
+          { text:'Projetar a câmera que prende a pessoa errada também é responsabilidade sua.', trait:'provocador', push:{cpi:1}, next:'r1' }
+        ]},
+        context:{ npc:'Eu faço a engenharia das PPPs de smart city — o mesmo template roda em trinta cidades. Câmera, sensor, central de monitoramento. Salvador foi cliente. Eu desenho o cano; não escolho a água que passa. Pelo menos era o que eu dizia.', options:[
+          { text:'E que água passou pelo cano?', trait:'cetico', push:{cpi:1}, next:'r1' },
+          { text:'Tem algum projeto seu de que você se arrepende?', trait:'empatico', push:{give_amara:1}, next:'r1' }
+        ]},
+        r1:{ npc:'Um colega me mandou documentos. As centrais que eu projetei estão sendo usadas pra monitorar reunião de movimento social. Sem ordem judicial. Nome, foto, GPS. O template é meu.', options:[
+          { text:'Então você é a única pessoa que pode provar isso. Tem que aparecer.', trait:'provocador', push:{cpi:2}, next:'r2' },
+          { text:'Não vai sozinho pra fogueira. Passa pra quem tem proteção institucional.', trait:'observador', push:{give_amara:2}, next:'r2' },
+          { text:'Vaza, mas protege sua identidade — anônimo.', trait:'cetico', push:{anon:1,give_amara:1}, next:'r2' },
+          { text:'E o que isso custa pra você, de verdade?', trait:'empatico', push:{give_amara:1}, next:'r2' }
+        ]},
+        r2:{ npc:'Se eu falar, dois clientes rescindem e a empresa fecha. Eu tenho filhos. Ainda acha que eu devo me expor?', options:[
+          { text:'Tem gente sendo presa com dado da sua câmera. Isso pesa mais que contrato.', trait:'provocador', push:{cpi:2}, next:'__decide__' },
+          { text:'Você não precisa se expor. Só que o documento chegue em quem pode usar.', trait:'empatico', push:{give_amara:2}, next:'__decide__' },
+          { text:'Se você não consegue arcar com isso, talvez não seja a sua briga.', trait:'cetico', push:{destroy:2}, next:'__decide__' },
+          { text:'Existe um jeito de sair sem o seu nome. A imprensa protege fonte.', trait:'observador', push:{anon:2}, next:'__decide__' }
+        ]}
+      }
+    }
+  },
+
+  /* ── AMARA ── decisão DELA: publicar direto / via jornalista / via periódico / reunião ── */
+  amara:{
+    id:'amara', name:'Amara Silva', role:'Pesquisadora de Direitos Digitais · UFBA',
+    color:'#F59E0B', col:3, row:8, requires:['marco','rodrigo'],
+    lockedLine:'"Ainda não. Fale com quem decidiu e com quem projetou primeiro. Depois eu te mostro o mapa." (fale com Marco e Rodrigo antes)',
+    convo:{
+      start:'open', fallback:'direct',
+      outcomes:{
+        direct:{ label:'Publicou o mapa direto.',
+          narrate:['Amara fecha o laptop. "Tá. Sai. Sai inteiro, sai agora."','Ela publica o mapa racial das câmeras direto. A secretaria responde em 24 horas — mas o dado já está circulando.'],
+          effects:{ amara_published:'direct', equity:2, transparency:1 } },
+        journalist:{ label:'Publicou via jornalismo de dados.',
+          narrate:['"Sozinha eu sou alvo. Com a imprensa, eu sou fonte." Ela decide procurar a jornalista de dados antes.','A reportagem aquece o terreno; o paper sai depois, num ambiente que não dá mais pra ignorar.'],
+          effects:{ amara_journalist_ally:true, equity:1, transparency:1 } },
+        journal:{ label:'Blindou em periódico internacional.',
+          narrate:['"Pressa é o que eles querem. Eu vou blindada." Ela submete primeiro a um periódico internacional.','Demora mais, mas quando sai ninguém consegue derrubar pela metodologia.'],
+          effects:{ transparency:1, equity:1 } },
+        meeting:{ label:'Levou à secretaria antes.',
+          narrate:['"Talvez dê pra resolver sem queimar tudo." Ela aceita uma reunião com a secretaria antes.','A reunião não muda a distribuição das câmeras, mas fica registrada em ata.'],
+          effects:{ transparency:1 } }
+      },
+      nodes:{
+        open:{ npc:'Você chegou até mim, então já falou com quem decide e com quem projeta. Bom. Eu tenho o que falta: o mapa.', options:[
+          { text:'Antes do mapa — me explica o que a sua pesquisa mostra, em uma frase.', next:'context' },
+          { text:'Como você garante que esse mapa não é leitura enviesada sua?', trait:'cetico', push:{journal:1}, next:'r1' },
+          { text:'Você falou em "mapa racial". Isso te toca de perto?', trait:'empatico', push:{direct:1}, next:'r1' }
+        ]},
+        context:{ npc:'Eu cruzei a localização das câmeras com renda e raça por bairro. Elas não seguem onde tem mais crime. Seguem onde mora mais gente preta e pobre. Liberdade, Cajazeiras. Não é acaso técnico — é decisão política que nunca foi chamada de decisão. Meu irmão Davi é parado no ônibus toda semana.', options:[
+          { text:'Quem mais já viu esse mapa?', trait:'observador', push:{journalist:1}, next:'r1' },
+          { text:'E o que a secretaria respondeu sobre isso?', trait:'cetico', push:{direct:1}, next:'r1' }
+        ]},
+        r1:{ npc:'Esse dado precisa sair. Mas o jeito que ele sai muda tudo. Se eu solto errado, viram "duas versões da realidade" e o debate morre empatado.', options:[
+          { text:'Publica direto e alto. O dado é seu, a coragem também.', trait:'provocador', push:{direct:2}, next:'r2' },
+          { text:'Põe uma jornalista de dados pra contar isso ao público antes do paper.', trait:'observador', push:{journalist:2}, next:'r2' },
+          { text:'Blinda com revisão internacional primeiro, pra ninguém te derrubar na metodologia.', trait:'cetico', push:{journal:2}, next:'r2' },
+          { text:'Você não devia ter que carregar essa briga sozinha.', trait:'empatico', push:{direct:1,meeting:1}, next:'r2' }
+        ]},
+        r2:{ npc:'Dois vereadores já pediram minha cabeça na universidade uma vez. Se eu soltar isso, vem de novo. Mesmo assim você acha que eu devo?', options:[
+          { text:'O medo deles de você é a prova de que o dado importa. Solta.', trait:'provocador', push:{direct:2}, next:'__decide__' },
+          { text:'Solta com aliança. Sozinha você é alvo; com a imprensa, é fonte.', trait:'observador', push:{journalist:2}, next:'__decide__' },
+          { text:'Solta quando estiver blindada. Pressa é o que eles querem.', trait:'cetico', push:{journal:2}, next:'__decide__' },
+          { text:'Seu irmão já paga o preço todo dia. O dado é por ele também.', trait:'empatico', push:{direct:1}, next:'__decide__' }
+        ]}
+      }
+    }
+  },
+
+  /* ── EDU ── decisão DELE: o que ele quer da própria luta ── */
+  edu:{
+    id:'edu', name:'Carlos Eduardo "Edu" Santos', role:'Entregador de Aplicativo · Pelourinho',
+    color:'#8B5CF6', col:8, row:16, requires:['marco','rodrigo','amara'],
+    lockedLine:'"A senhora vai querer entender tudo antes de falar comigo." (fale com Marco, Rodrigo e Amara antes)',
+    convo:{
+      start:'open', fallback:'visibility',
+      outcomes:{
+        stop:{ label:'Quer que pare. Só isso.',
+          narrate:['Edu balança a cabeça. "É isso. Eu não quero virar caso, nem símbolo. Eu quero que pare."','"Que desliguem a câmera que erra. Que eu volte a ser só um cara entregando comida."'],
+          effects:{ edu_demand:'stop', cameras:-1 } },
+        visibility:{ label:'Quer ser visto, não virar dado.',
+          narrate:['Edu pensa. "Quero que vejam o meu rosto. Que saibam que é gente, não estatística."','"Se as pessoas souberem o que acontece com a gente, fica mais difícil fingir que não vê."'],
+          effects:{ edu_demand:'visibility', eduRegistered:true, equity:1 } },
+        meaning:{ label:'Quer que os registros virem prova.',
+          narrate:['Edu olha pro celular. "Então esses 47 registros não foram à toa."','"Eu quero que isso vire um caso que ninguém consiga enterrar. Com nome. O meu."'],
+          effects:{ edu_demand:'meaning', eduRegistered:true, edu_named_case:true, transparency:1, equity:1 } },
+        future:{ npc:'', label:'Quer outra cidade para o sobrinho.',
+          narrate:['Edu fica em silêncio um tempo. "Pra mim já foi. Eu aguento."','"Mas o meu sobrinho tem 11. Eu quero que aos 21 ele não pare na mesma esquina que eu."'],
+          effects:{ edu_demand:'future', equity:1 } }
+      },
+      nodes:{
+        open:{ npc:'Você falou com todo mundo lá de cima. Agora chegou em mim. Eu sou o fim da linha — onde a câmera encosta na pele.', options:[
+          { text:'Me conta o que aconteceu com você. Quero entender pela sua boca.', next:'context' },
+          { text:'Quatro vezes pela mesma câmera... como é viver isso?', trait:'empatico', push:{visibility:1}, next:'r1' },
+          { text:'Você tem como provar que foi a mesma câmera, o mesmo padrão?', trait:'cetico', push:{meaning:1}, next:'r1' }
+        ]},
+        context:{ npc:'Eu faço entrega de aplicativo. Mesma rota todo dia no Pelourinho. A câmera com reconhecimento facial me marca como suspeito e a viatura para. Quatro vezes esse mês. Comecei a anotar: hora, câmera, número da viatura. Tenho 47 registros no celular. A ONG diz que é o caso mais documentado dos 264.', options:[
+          { text:'Por que você continua anotando, mesmo com medo?', trait:'observador', push:{meaning:1}, next:'r1' },
+          { text:'Sua família sabe disso tudo?', trait:'empatico', push:{future:1}, next:'r1' }
+        ]},
+        r1:{ npc:'Eu já fui porta-voz uma vez. Nome e rosto na mídia. Minha mãe não dormiu. E eu fico pensando no meu sobrinho, 11 anos, daqui a 10.', options:[
+          { text:'As pessoas precisam ver o seu rosto pra entender que é gente, não dado.', trait:'empatico', push:{visibility:2}, next:'r2' },
+          { text:'Seus 47 registros podem virar prova jurídica. Isso fica.', trait:'observador', push:{meaning:2}, next:'r2' },
+          { text:'Nada disso devia existir. Câmera que erra tinha que ser desligada.', trait:'provocador', push:{stop:2}, next:'r2' },
+          { text:'Faz por ele. Pra que aos 21 ele não pare na mesma esquina.', trait:'empatico', push:{future:2}, next:'r2' }
+        ]},
+        r2:{ npc:'Então me diz, com sinceridade: depois de ouvir tudo, o que você acha que eu devia querer disso?', options:[
+          { text:'Que te vejam. Que saibam o que acontece com vocês.', trait:'empatico', push:{visibility:1}, next:'__decide__' },
+          { text:'Que o que você anotou vire um caso que ninguém possa enterrar.', trait:'observador', push:{meaning:1}, next:'__decide__' },
+          { text:'Que pare. Simples assim.', trait:'provocador', push:{stop:1}, next:'__decide__' },
+          { text:'Que o seu sobrinho herde uma cidade diferente.', trait:'empatico', push:{future:1}, next:'__decide__' }
+        ]}
+      }
+    }
+  }
+};
+const CHAR_ORDER=['marco','rodrigo','amara','edu'];
+
+/* ════════════════════════════════════════════════════════════
+   PARTE 5 — ESTADO, EFEITOS E ARQUÉTIPOS (herdado da base)
+   ════════════════════════════════════════════════════════════ */
+let ST, PROFILE, completed;
+function freshState(){ return { cameras:0, transparency:6, equity:6 }; }
+function freshProfile(){ return { scores:{empatico:0,cetico:0,provocador:0,observador:0}, dominant:null }; }
+function resetGame(){ ST=freshState(); PROFILE=freshProfile(); completed={}; }
+function applyEffects(e){ if(!e) return; for(const[k,v]of Object.entries(e)){ if(typeof v==='number'){ ST[k]=(ST[k]||0)+v; ST[k]=Math.max(0,Math.min(12,ST[k])); } else ST[k]=v; } }
+
+const ARCHETYPES=[
+  { name:'CIDADE VIGIADA', color:'#EF4444', condition:(st)=>st.cameras>=7&&st.equity<=4,
+    desc:'O caminho do menor esforço. Câmera em cada esquina, contrato privado, dado no exterior. A cidade mais provável — é o que acontece quando cada decisão individual parece razoável.' },
+  { name:'CIDADE EM DISPUTA', color:'#10B981', condition:(st)=>st.transparency>=8&&st.equity>=8,
+    desc:'A cidade mais difícil de construir. Exigiu que cada pessoa assumisse um custo real. Resistência documentada e organizada. Não é vitória — é luta com registros.' },
+  { name:'CIDADE VIGIADA, CONSCIENTE', color:'#F59E0B', condition:(st)=>st.cameras>=6&&st.transparency>=8,
+    desc:'Alto monitoramento, mas com alta transparência sobre ele. Raro: a cidade sabe que é vigiada e tem dado público pra questionar. Não é boa — é diferente.' },
+  { name:'PUXADINHO TECNOLÓGICO', color:'#4A3F38', condition:()=>true,
+    desc:'Salvador na maior parte dos caminhos: muita tecnologia, pouca governança, resistência fragmentada. Nenhum extremo. A cidade mais comum.' }
+];
+function getArchetype(){ for(const a of ARCHETYPES) if(a.condition(ST)) return a; return ARCHETYPES[ARCHETYPES.length-1]; }
+
+/* ════════════════════════════════════════════════════════════
+   PARTE 6 — SEU RETRATO (perfil derivado das falas que você escolheu)
+   ════════════════════════════════════════════════════════════ */
+const TRAIT_META={
+  empatico:{label:'EMPÁTICA',color:'#10B981', line:'Você conversou pela escuta. As pessoas baixaram a guarda perto de você.'},
+  cetico:{label:'CÉTICA',color:'#3B82F6', line:'Você conversou pela dúvida. Cobrou prova antes de aceitar qualquer coisa.'},
+  provocador:{label:'PROVOCADORA',color:'#EF4444', line:'Você conversou pelo confronto. Empurrou cada um para a ação.'},
+  observador:{label:'OBSERVADORA',color:'#F59E0B', line:'Você conversou pelo mapa. Pensou em registro, timing e quem sustenta a briga.'}
+};
+function recalcDominant(){ let m=0,d=null; for(const[k,v]of Object.entries(PROFILE.scores)) if(v>m){m=v;d=k;} PROFILE.dominant=d; }
+function addTrait(t){ if(!t) return; PROFILE.scores[t]=(PROFILE.scores[t]||0)+1; recalcDominant(); updateProfileUI(); showTraitFlash(t); }
+
+/* ════════════════════════════════════════════════════════════
+   PARTE 7 — CANVAS, TILES E SPRITES
+   ════════════════════════════════════════════════════════════ */
+const canvas=document.getElementById('iso'), ctx=canvas.getContext('2d');
+function resize(){ const c=document.getElementById('game-canvas'); canvas.width=c.clientWidth; canvas.height=c.clientHeight; }
+window.addEventListener('resize',resize); resize();
+let camOffset={x:0,y:0}, camTarget={x:0,y:0};
+const TILE_COLORS={
+  0:{top:'#E8E0D0',l:'#D4C9B8',r:'#C8BC9E'},1:{top:'#B0A898',l:'#7A6E62',r:'#5A5047'},
+  2:{top:'#CFC7B6',l:'#A89880',r:'#8A7460'},3:{top:'#7FB8DC',l:'#4F97C9',r:'#2F77B0'},
+  4:{top:'#A8D8A0',l:'#78C060',r:'#549A3C'},5:{top:'#E8D898',l:'#CBB876',r:'#A89858'}
+};
+function tileScreen(c,r){ const p=isoProject(c,r); return { x:p.x+canvas.width/2+camOffset.x, y:p.y+canvas.height*0.30+camOffset.y }; }
+function drawTile(c,r,type){
+  const s=tileScreen(c,r), col=TILE_COLORS[type]||TILE_COLORS[0], tw=TILE_W, th=TILE_H, h=(type===1)?24:0;
+  ctx.beginPath(); ctx.moveTo(s.x,s.y-h); ctx.lineTo(s.x+tw/2,s.y+th/2-h); ctx.lineTo(s.x,s.y+th-h); ctx.lineTo(s.x-tw/2,s.y+th/2-h); ctx.closePath();
+  ctx.fillStyle=col.top; ctx.fill(); ctx.strokeStyle='rgba(42,36,32,0.07)'; ctx.lineWidth=0.5; ctx.stroke();
+  if(type===1){
+    ctx.beginPath(); ctx.moveTo(s.x-tw/2,s.y+th/2-h); ctx.lineTo(s.x,s.y+th-h); ctx.lineTo(s.x,s.y+th); ctx.lineTo(s.x-tw/2,s.y+th/2); ctx.closePath(); ctx.fillStyle=col.l; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s.x+tw/2,s.y+th/2-h); ctx.lineTo(s.x,s.y+th-h); ctx.lineTo(s.x,s.y+th); ctx.lineTo(s.x+tw/2,s.y+th/2); ctx.closePath(); ctx.fillStyle=col.r; ctx.fill(); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,210,0.40)'; ctx.fillRect(s.x-11,s.y+th/2-h+5,4,4); ctx.fillRect(s.x+5,s.y+th/2-h+5,4,4);
+  }
+}
+function charScreen(c,r){ const s=tileScreen(c,r); return { x:s.x, y:s.y+TILE_H/2 }; }
+function drawCharacter(x,y,id){
+  const skin='#D4A574';
+  ctx.save();
+  ctx.fillStyle='rgba(42,36,32,0.16)'; ctx.beginPath(); ctx.ellipse(x,y+2,11,4,0,0,Math.PI*2); ctx.fill();
+  const pal={ player:{body:'#EF4444',hair:'#2A2420',legs:'#2A2420'}, marco:{body:'#3B82F6',hair:'#2A2420',legs:'#1E2A44'},
+    rodrigo:{body:'#10B981',hair:'#3A2E22',legs:'#2A2420'}, amara:{body:'#F59E0B',hair:'#241A12',legs:'#3A2E22'},
+    edu:{body:'#8B5CF6',hair:'#1A140E',legs:'#2A2420'} }[id]||{body:'#999',hair:'#2A2420',legs:'#2A2420'};
+  ctx.fillStyle=pal.legs; ctx.fillRect(x-5,y-10,4,10); ctx.fillRect(x+1,y-10,4,10);
+  ctx.fillStyle=pal.body; ctx.fillRect(x-7,y-22,14,13); ctx.fillRect(x-11,y-22,5,9); ctx.fillRect(x+6,y-22,5,9);
+  ctx.fillStyle=skin; ctx.fillRect(x-3,y-26,6,5); ctx.beginPath(); ctx.ellipse(x,y-31,8,8,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#2A2420'; ctx.fillRect(x-4,y-33,2,2); ctx.fillRect(x+2,y-33,2,2);
+  if(id==='player'){ ctx.fillStyle='#EF4444'; ctx.fillRect(x-8,y-39,16,6); ctx.fillRect(x-6,y-36,12,3); ctx.fillStyle='#7A2E1E'; ctx.fillRect(x+7,y-20,4,9); }
+  else if(id==='marco'){ ctx.fillStyle=pal.hair; ctx.fillRect(x-7,y-40,14,7); ctx.fillStyle='#FFFDF8'; ctx.fillRect(x-2,y-22,4,13); }
+  else if(id==='rodrigo'){ ctx.fillStyle=pal.hair; ctx.fillRect(x-7,y-40,14,6); ctx.fillStyle='#F5F0E8'; ctx.fillRect(x-6,y-19,12,5); }
+  else if(id==='amara'){ ctx.fillStyle=pal.hair; ctx.fillRect(x-8,y-41,16,9); ctx.beginPath(); ctx.arc(x,y-42,4,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#E8D898'; ctx.fillRect(x-12,y-20,4,10); }
+  else if(id==='edu'){ ctx.fillStyle='#EF4444'; ctx.fillRect(x-8,y-39,16,5); ctx.fillStyle='#3A2E55'; ctx.fillRect(x-10,y-23,7,12); }
+  ctx.font='bold 7px "Space Mono", monospace'; ctx.textAlign='center';
+  const label=id==='player'?'VOCÊ':NPCS[id].name.split(' ')[0].toUpperCase();
+  const lw=ctx.measureText(label).width+8;
+  ctx.fillStyle='rgba(250,246,238,0.92)'; ctx.fillRect(x-lw/2,y-53,lw,11);
+  ctx.fillStyle=id==='player'?'#EF4444':pal.body; ctx.fillText(label,x,y-44);
+  ctx.restore();
+}
+function drawInteractRing(x,y,c){ ctx.save(); ctx.strokeStyle=c; ctx.lineWidth=1.5; ctx.setLineDash([3,3]); ctx.beginPath(); ctx.ellipse(x,y,19,7,0,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
+function render(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  camOffset.x+=(camTarget.x-camOffset.x)*0.1; camOffset.y+=(camTarget.y-camOffset.y)*0.1;
+  for(let r=0;r<MAP_ROWS;r++) for(let c=0;c<MAP_COLS;c++) drawTile(c,r,TILE_MAP[r][c]);
+  ctx.font='8px "Space Mono", monospace'; ctx.textAlign='center'; ctx.fillStyle='rgba(42,36,32,0.32)';
+  for(const b of BAIRRO_LABELS){ const s=tileScreen(b.col,b.row); ctx.fillText(b.text,s.x,s.y+TILE_H/2); }
+  const ents=CHAR_ORDER.map(id=>({id,col:NPCS[id].col,row:NPCS[id].row})); ents.push({id:'player',col:player.col,row:player.row});
+  ents.sort((a,b)=>(a.col+a.row)-(b.col+b.row));
+  for(const e of ents){
+    const sc=charScreen(e.col,e.row);
+    if(e.id!=='player'){
+      const near=Math.hypot(player.col-e.col,player.row-e.row)<1.8, done=completed[e.id];
+      if(near&&!activeNPC&&!done) drawInteractRing(sc.x,sc.y+2,NPCS[e.id].color);
+      ctx.save(); if(done) ctx.globalAlpha=0.45; drawCharacter(sc.x,sc.y,e.id); ctx.restore();
+    } else drawCharacter(sc.x,sc.y,'player');
+  }
+  requestAnimationFrame(render);
+}
+
+/* ════════════════════════════════════════════════════════════
+   PARTE 8 — MOVIMENTO (teclado + joystick) E PROXIMIDADE
+   ════════════════════════════════════════════════════════════ */
+let player={col:10,row:10}, activeNPC=null;
+const keys={}; let joyActive=false, joyVec={x:0,y:0}; const SPEED=0.07;
+document.addEventListener('keydown',e=>{ keys[e.code]=true; if(e.code==='KeyE'&&!activeNPC){ const n=getNearbyNPC(); if(n) tryOpen(n); } });
+document.addEventListener('keyup',e=>{ keys[e.code]=false; });
+function getNearbyNPC(){ for(const id of CHAR_ORDER){ const n=NPCS[id]; if(Math.hypot(player.col-n.col,player.row-n.row)<1.8) return n; } return null; }
+function updateMovement(){
+  if(activeNPC){ requestAnimationFrame(updateMovement); return; }
+  let dx=0,dy=0;
+  if(keys['ArrowUp']||keys['KeyW']){dx-=1;dy-=1;} if(keys['ArrowDown']||keys['KeyS']){dx+=1;dy+=1;}
+  if(keys['ArrowLeft']||keys['KeyA']){dx-=1;dy+=1;} if(keys['ArrowRight']||keys['KeyD']){dx+=1;dy-=1;}
+  if(joyActive){ dx=joyVec.x+joyVec.y; dy=joyVec.y-joyVec.x; }
+  if(dx||dy){
+    const len=Math.hypot(dx,dy); dx/=len; dy/=len;
+    const nx=player.col+dx*SPEED, ny=player.row+dy*SPEED;
+    if(canWalk(Math.round(nx),Math.round(player.row))) player.col=nx;
+    if(canWalk(Math.round(player.col),Math.round(ny))) player.row=ny;
+    const ps=isoProject(player.col,player.row); camTarget.x=-ps.x; camTarget.y=-ps.y;
+    const n=getNearbyNPC(), prompt=document.getElementById('interact-prompt');
+    if(n&&!completed[n.id]){ prompt.textContent=`[ E ] Conversar com ${n.name.split(' ')[0]}`; prompt.style.display='block'; }
+    else prompt.style.display='none';
+  }
+  requestAnimationFrame(updateMovement);
+}
+const joyZone=document.getElementById('joystick-zone'), joyThumb=document.getElementById('joystick-thumb');
+function joyStart(e){ joyActive=true; joyMove(e); }
+function joyMove(e){ if(!joyActive) return; const t=e.touches?e.touches[0]:e; const rect=document.getElementById('joystick-base').getBoundingClientRect(); const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2; let dx=t.clientX-cx,dy=t.clientY-cy; const max=34,d=Math.hypot(dx,dy); if(d>max){dx=dx/d*max;dy=dy/d*max;} joyThumb.style.transform=`translate(${dx}px,${dy}px)`; joyVec.x=dx/max; joyVec.y=dy/max; }
+function joyEnd(){ joyActive=false; joyVec={x:0,y:0}; joyThumb.style.transform='translate(0,0)'; }
+joyZone.addEventListener('touchstart',joyStart,{passive:true}); joyZone.addEventListener('touchmove',joyMove,{passive:true}); joyZone.addEventListener('touchend',joyEnd);
+document.getElementById('interact-btn').addEventListener('click',()=>{ if(!activeNPC){ const n=getNearbyNPC(); if(n) tryOpen(n); } });
+
+/* ════════════════════════════════════════════════════════════
+   PARTE 9 — CONVERSA RAMIFICADA (você fala; o NPC decide)
+   ════════════════════════════════════════════════════════════ */
+let convoPush={};
+function isUnlocked(npc){ return npc.requires.every(r=>completed[r]); }
+function tryOpen(npc){
+  if(completed[npc.id]){ flashPrompt(`${npc.name.split(' ')[0]} — conversa concluída ✓`); return; }
+  if(!isUnlocked(npc)){ flashPrompt(npc.lockedLine||'Ainda não é hora.'); return; }
+  openDialogue(npc);
+}
+function flashPrompt(t){ const p=document.getElementById('interact-prompt'); p.textContent=t; p.style.display='block'; setTimeout(()=>{p.style.display='none';},3200); }
+
+function openDialogue(npc){
+  activeNPC=npc; convoPush={};
+  document.getElementById('dlg-dot').style.background=npc.color;
+  document.getElementById('dlg-name').textContent=npc.name.toUpperCase();
+  document.getElementById('dlg-role').textContent=npc.role;
+  document.getElementById('dlg-messages').innerHTML='';
+  document.getElementById('dlg-choices').innerHTML='';
+  document.getElementById('dialogue-box').classList.add('open');
+  document.getElementById('dialogue-overlay').classList.add('active');
+  document.getElementById('interact-prompt').style.display='none';
+  renderNode(npc, npc.convo.start);
+}
+function closeDialogue(){
+  document.getElementById('dialogue-box').classList.remove('open');
+  document.getElementById('dialogue-overlay').classList.remove('active');
+  activeNPC=null;
+}
+function addMessage(text,type,intent){
+  const wrap=document.getElementById('dlg-messages');
+  const d=document.createElement('div'); d.className=`msg ${type}`;
+  d.innerHTML=`<div class="msg-bubble">${text}</div>`;
+  if(intent&&type==='player'){ const t=document.createElement('div'); t.className='msg-intent'; t.textContent=intent; d.appendChild(t); }
+  wrap.appendChild(d); wrap.scrollTop=wrap.scrollHeight;
+}
+function renderNode(npc,nodeId){
+  const node=npc.convo.nodes[nodeId];
+  addMessage(node.npc,'npc');
+  setTimeout(()=>renderOptions(npc,node.options),320);
+}
+function renderOptions(npc,options){
+  const box=document.getElementById('dlg-choices'); box.innerHTML='';
+  for(const opt of options){
+    const isCtx=!opt.trait&&!opt.push;
+    const color=isCtx?'#4A3F38':(TRAIT_META[opt.trait]?TRAIT_META[opt.trait].color:'#4A3F38');
+    const d=document.createElement('div'); d.className='dlg-choice';
+    d.innerHTML=`<span class="dlg-choice-letter" style="color:${color}">${isCtx?'?':'›'}</span><span>${opt.text}</span>`;
+    d.addEventListener('click',()=>chooseOption(npc,opt));
+    box.appendChild(d);
+  }
+}
+function chooseOption(npc,opt){
+  document.getElementById('dlg-choices').innerHTML='';
+  addMessage(opt.text,'player', opt.trait?`→ ${TRAIT_META[opt.trait].label}`:null);
+  addTrait(opt.trait);
+  if(opt.push) for(const[k,v]of Object.entries(opt.push)) convoPush[k]=(convoPush[k]||0)+v;
+  if(opt.next==='__decide__') setTimeout(()=>decide(npc),520);
+  else setTimeout(()=>renderNode(npc,opt.next),440);
+}
+function decide(npc){
+  const oc=npc.convo.outcomes; let best=npc.convo.fallback, val=-1;
+  for(const k of Object.keys(oc)){ const v=convoPush[k]||0; if(v>val){ val=v; best=k; } }
+  if(val<=0) best=npc.convo.fallback;
+  const outcome=oc[best], lines=outcome.narrate; let i=0;
+  (function step(){
+    if(i<lines.length){ addMessage(lines[i],'npc'); i++; setTimeout(step,820); }
+    else{
+      applyEffects(outcome.effects); npc._chosen=outcome.label; updateStatsUI(); completed[npc.id]=true;
+      setTimeout(()=>{ closeDialogue(); if(CHAR_ORDER.every(id=>completed[id])) setTimeout(showFinalReport,450); },1200);
+    }
+  })();
+}
+document.getElementById('dlg-close').addEventListener('click',closeDialogue);
+
+/* ════════════════════════════════════════════════════════════
+   PARTE 10 — HUD/RETRATO, RELATÓRIO FINAL E BOOT
+   ════════════════════════════════════════════════════════════ */
+function updateStatsUI(){
+  document.getElementById('sf-cam').style.width=(ST.cameras/12*100)+'%';
+  document.getElementById('sf-tr').style.width=(ST.transparency/12*100)+'%';
+  document.getElementById('sf-eq').style.width=(ST.equity/12*100)+'%';
+}
+function updateProfileUI(){
+  const panel=document.getElementById('profile-panel'); panel.style.display='block';
+  if(PROFILE.dominant){ const m=TRAIT_META[PROFILE.dominant]; document.getElementById('pp-dot').style.background=m.color;
+    const t=document.getElementById('pp-trait'); t.textContent=m.label; t.style.color=m.color; }
+  const bars=document.getElementById('pp-bars'); bars.innerHTML='';
+  const maxv=Math.max(1,...Object.values(PROFILE.scores));
+  for(const k of ['empatico','cetico','provocador','observador']){ const m=TRAIT_META[k];
+    bars.insertAdjacentHTML('beforeend',`<div class="pp-bar-row"><span class="pp-bar-lab">${m.label}</span><div class="pp-bar-track"><div class="pp-bar-fill" style="width:${PROFILE.scores[k]/maxv*100}%;background:${m.color}"></div></div></div>`);
+  }
+}
+function showTraitFlash(t){ if(!t) return; const el=document.getElementById('intent-flash'); el.style.background=TRAIT_META[t].color; el.textContent='+ '+TRAIT_META[t].label; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
+
+function buildStateFlags(){
+  const f=[];
+  if(ST.eduRegistered) f.push('Incidentes documentados pelo próprio entregador viraram evidência formal — produzida por quem foi abordado.');
+  if(ST.edu_named_case) f.push('Ação com nome e rosto: o sistema foi desafiado publicamente por quem ele afetou diretamente.');
+  if(ST.marco_legacy==='positive') f.push('O relatório de falsos positivos saiu com assinatura. Virou referência para auditoria de contratos de vigilância.');
+  if(ST.cpiDeponent==='full') f.push('Depoimento técnico completo na CPI, com registro oficial permanente.');
+  if(ST.rodrigoWhistle) f.push('Documentos vazados por quem projetou o sistema. A engenharia da vigilância virou prova contra ela mesma.');
+  if(ST.reportStatus==='suppressed') f.push('O relatório de falsos positivos foi enterrado. A proteção de dados foi descumprida — e ninguém soube.');
+  if(ST.reportStatus==='public') f.push('Relatório de falsos positivos tornado público. Outros municípios passam a questionar sistemas iguais.');
+  if(ST.reportStatus==='leaked_to_amara') f.push('O relatório chegou à pesquisa acadêmica e ganhou enquadramento crítico antes de virar disputa pública.');
+  if(ST.amara_journalist_ally) f.push('Aliança com jornalismo de dados: a reportagem aqueceu o terreno antes do paper.');
+  if(ST.amara_published==='direct') f.push('O mapa racial das câmeras foi publicado direto. A secretaria respondeu em 24h.');
+  return f;
+}
+function showFinalReport(){
+  const arch=getArchetype(), flags=buildStateFlags();
+  const epi={ meaning:'"Não quero que tenha sido em vão." — Edu Santos, entregador, Salvador.',
+    future:'"Meu sobrinho não precisa passar por isso daqui a 10 anos." — Edu Santos.',
+    visibility:'"Quero que as pessoas saibam o que acontece com a gente." — Edu Santos.',
+    stop:'"Quero que pare. Quero não ser parado por uma câmera que erra." — Edu Santos.' }[ST.edu_demand]||null;
+  const cards=CHAR_ORDER.map(id=>{ const n=NPCS[id];
+    return `<div class="rc-card" style="border-top-color:${n.color}"><div class="rc-name" style="color:${n.color}">${n.name.split(' ').slice(0,2).join(' ')}</div><div class="rc-choice">${n._chosen||'—'}</div></div>`; }).join('');
+  const pm=PROFILE.dominant?TRAIT_META[PROFILE.dominant]:{label:'INDEFINIDA',color:'#4A3F38',line:'Você passou rápido demais para deixar um rastro claro.'};
+  const tally=['empatico','cetico','provocador','observador'].filter(k=>PROFILE.scores[k]>0)
+    .map(k=>`<span class="rp-tag">${TRAIT_META[k].label.toLowerCase()} ×${PROFILE.scores[k]}</span>`).join('');
+  document.getElementById('report-content').innerHTML=`
+    <div class="report-kicker">Diagnóstico final — Salvador, BA</div>
+    <div class="report-arch" style="color:${arch.color}">${arch.name}</div>
+    <div class="report-desc">${arch.desc}</div>
+    <div class="report-section">Estado da cidade</div>
+    <div class="report-bars">
+      <div class="rb-row"><div class="rb-lab">Câmeras</div><div class="rb-track"><div class="rb-fill" style="width:${ST.cameras/12*100}%;background:#EF4444"></div></div><div class="rb-num">${ST.cameras}</div></div>
+      <div class="rb-row"><div class="rb-lab">Transparência</div><div class="rb-track"><div class="rb-fill" style="width:${ST.transparency/12*100}%;background:#3B82F6"></div></div><div class="rb-num">${ST.transparency}</div></div>
+      <div class="rb-row"><div class="rb-lab">Equidade</div><div class="rb-track"><div class="rb-fill" style="width:${ST.equity/12*100}%;background:#10B981"></div></div><div class="rb-num">${ST.equity}</div></div>
+    </div>
+    <div class="report-section">O que cada um decidiu (depois de falar com você)</div>
+    <div class="report-chars">${cards}</div>
+    <div class="report-section">Seu retrato como interlocutora</div>
+    <div class="report-portrait"><div class="rp-trait" style="color:${pm.color}">${pm.label}</div><div class="rp-line">${pm.line}</div><div class="rp-tags">${tally}</div></div>
+    ${flags.length?`<div class="report-section">Variáveis de impacto</div><ul class="report-flags">${flags.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
+    ${epi?`<div class="report-epigraph">${epi}</div>`:''}
+    <div class="report-src">Baseado em pesquisa sobre cidade inteligente e vigilância em Salvador · LGPD · distribuição racializada de câmeras · capitalismo de vigilância (Zuboff) · colonialismo de dados (Couldry &amp; Mejias) · Teoria Ator-Rede (Latour, Lemos).</div>
+    <button class="btn-restart" id="btn-restart">⟳ jogar de novo</button>`;
+  document.getElementById('final-report').classList.add('open');
+  document.getElementById('btn-restart').addEventListener('click',restart);
+}
+function restart(){
+  resetGame(); player={col:10,row:10};
+  for(const id of CHAR_ORDER) delete NPCS[id]._chosen;
+  document.getElementById('final-report').classList.remove('open');
+  document.getElementById('profile-panel').style.display='none';
+  updateStatsUI();
+}
+function boot(){
+  resetGame(); updateStatsUI();
+  document.getElementById('btn-start').addEventListener('click',()=>{
+    document.getElementById('splash').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    if(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||'ontouchstart' in window){
+      document.getElementById('joystick-zone').style.display='block';
+      document.getElementById('interact-btn').style.display='block';
+    }
+    const ps=isoProject(player.col,player.row); camOffset.x=-ps.x; camOffset.y=-ps.y; camTarget.x=-ps.x; camTarget.y=-ps.y;
+    render(); updateMovement();
+  });
+}
+document.addEventListener('DOMContentLoaded',boot);
+</script>
+</body>
+</html>
